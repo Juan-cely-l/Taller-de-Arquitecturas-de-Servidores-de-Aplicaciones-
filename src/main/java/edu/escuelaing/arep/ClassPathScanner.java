@@ -3,26 +3,42 @@ package edu.escuelaing.arep;
 import java.io.File;
 import java.net.URL;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ClassPathScanner {
 
-    /**
-     * Scans the base package and registers every discovered @RestController.
-     */
     public static void scan(String basePackage) throws Exception {
-        // "edu.escuelaing.arep" -> "edu/escuelaing/arep"
         String packagePath = basePackage.replace('.', '/');
-
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Enumeration<URL> resources = classLoader.getResources(packagePath);
 
         while (resources.hasMoreElements()) {
             URL resource = resources.nextElement();
-            File directory = new File(resource.toURI());
+            String protocol = resource.getProtocol();
 
-            if (directory.exists()) {
-                for (String className : findClasses(directory, basePackage)) {
-                    tryLoadController(className);
+            if ("file".equals(protocol)) {
+                // Running from IDE / exploded classes directory
+                File directory = new File(resource.toURI());
+                if (directory.exists()) {
+                    for (String className : findClasses(directory, basePackage)) {
+                        tryLoadController(className);
+                    }
+                }
+            } else if ("jar".equals(protocol)) {
+                // Running from a JAR: jar:file:/path/to/app.jar!/edu/escuelaing/arep
+                String jarPath = resource.getPath(); // file:/path/to/app.jar!/edu/...
+                String jarFilePath = jarPath.substring(5, jarPath.indexOf("!")); // strip "file:" and "!/..."
+                try (JarFile jar = new JarFile(jarFilePath)) {
+                    Enumeration<JarEntry> entries = jar.entries();
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        String name = entry.getName(); // e.g. "edu/escuelaing/arep/HelloController.class"
+                        if (name.startsWith(packagePath) && name.endsWith(".class") && !entry.isDirectory()) {
+                            String className = name.replace('/', '.').replace(".class", "");
+                            tryLoadController(className);
+                        }
+                    }
                 }
             }
         }
@@ -40,12 +56,6 @@ public class ClassPathScanner {
         }
     }
 
-    /**
-     * Recursively walks the directory and returns class names.
-     * directory = /home/.../target/classes/edu/escuelaing/arep
-     * packageName = edu.escuelaing.arep
-     * Result: ["edu.escuelaing.arep.HelloController", ...]
-     */
     private static List<String> findClasses(File directory, String packageName) {
         List<String> classes = new ArrayList<>();
         File[] files = directory.listFiles();
@@ -53,10 +63,8 @@ public class ClassPathScanner {
 
         for (File file : files) {
             if (file.isDirectory()) {
-                // Subdirectory = subpackage: recursion
                 classes.addAll(findClasses(file, packageName + "." + file.getName()));
             } else if (file.getName().endsWith(".class")) {
-                // Remove ".class" to get the simple class name
                 classes.add(packageName + "." + file.getName().replace(".class", ""));
             }
         }

@@ -183,6 +183,69 @@ This screenshot validates direct static image delivery for `/logo.png`. It confi
 
 ![GET logo.png endpoint](Assets/Getlogo.png)
 
+## AWS EC2 Deployment
+
+This project was deployed to an **Amazon EC2 instance** and exposed through the instance public IP on port `8080`.
+
+### EC2 deployment steps
+
+1. Connect to the EC2 instance using SSH (`ec2-user`).
+2. Copy the generated JAR to the instance (`taller.jar`).
+3. Run the app with:
+
+```bash
+java -cp taller.jar edu.escuelaing.arep.MicroSpringBootApp
+```
+
+4. Ensure the EC2 Security Group allows inbound TCP traffic on ports `22` (SSH) and `8080` (application HTTP).
+5. Validate the public routes from a browser:
+
+```text
+http://54.226.203.123:8080/
+http://54.226.203.123:8080/hello
+http://54.226.203.123:8080/pi
+http://54.226.203.123:8080/greeting?name=Esteban
+http://54.226.203.123:8080/index.html
+http://54.226.203.123:8080/logo.png
+```
+
+### EC2 evidence screenshots
+
+#### 1. Application launch from EC2 terminal
+This image shows the instance terminal listing `taller.jar` and starting the server with `java -cp taller.jar ...`. It confirms that controllers were discovered and routes were registered correctly before the server began listening on port `8080`.
+
+![EC2 app startup](Assets/EC2run.png)
+
+#### 2. Server running and receiving requests
+This terminal output confirms the application is active on the EC2 instance and logs incoming HTTP requests (`/hello`, `/pi`, `/greeting`, `/index.html`, `/logo.png`). It proves end-to-end traffic reached the remote server.
+
+![EC2 running logs](Assets/EC2running.png)
+
+#### 3. GET `/hello` from public EC2 IP
+This browser capture verifies that `http://54.226.203.123:8080/hello` returns the expected plain-text response (`Hello, World!`) from `HelloController`.
+
+![EC2 hello endpoint](Assets/EC2hello.png)
+
+#### 4. GET `/index.html` from public EC2 IP
+This screenshot confirms static HTML delivery from the deployed server. It also shows the endpoint list rendered in the browser, validating classpath static resource handling in EC2.
+
+![EC2 index endpoint](Assets/EC2index.png)
+
+#### 5. GET `/logo.png` from public EC2 IP
+This image demonstrates correct static PNG delivery directly from `http://54.226.203.123:8080/logo.png`, proving binary file responses are working in the cloud deployment.
+
+![EC2 logo endpoint](Assets/EC2logo.png)
+
+#### 6. GET `/greeting?name=Esteban` from public EC2 IP
+This screenshot validates query parameter processing in production. The server receives `name=Esteban` and returns a personalized response with the visit counter.
+
+![EC2 greeting with query param](Assets/EC2nameEsteban.png)
+
+#### 7. GET `/pi` from public EC2 IP
+This capture confirms that the `/pi` route is available through EC2 and returns the numeric value of `Math.PI` as expected.
+
+![EC2 pi endpoint](Assets/EC2pi.png)
+
 ## Design Decisions
 
 **Non-concurrent by design**: The assignment asks for this explicitly. The `while(true)` in `HttpServer.start()` handles one request at a time. For production, an `ExecutorService` or `VirtualThreads` would be used, but for this educational prototype the sequential loop is correct and easier to debug.
