@@ -161,7 +161,7 @@ This screenshot shows the default behavior of `GreetingController#greeting` when
 ### 4. GET `/greeting?name=Esteban`
 This screenshot demonstrates query parameter resolution with `@RequestParam`. The response includes the provided name (`Esteban`) and the updated visit count.
 
-![GET greeting endpoint with name parameter](Assets/Getgreeting%3Fname%3DEsteban.png)
+![GET greeting endpoint with name parameter](Assets/GetgreetingnameEsteban.png)
 
 ### 5. GET `/hello`
 This screenshot validates the fixed string response for the `/hello` endpoint from `HelloController#webMethodHello`.
